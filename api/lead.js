@@ -1,10 +1,27 @@
-// POST /api/lead — nhận đăng ký tư vấn từ website, lưu thành file JSON riêng tư trên Vercel Blob.
-// Cần biến môi trường BLOB_READ_WRITE_TOKEN (Vercel tự thêm khi kết nối Blob store với project).
+// POST /api/lead — nhận đăng ký tư vấn từ website, ghi thẳng vào Lark Base (xem _lark.js).
+// Nếu chưa cấu hình Lark hoặc Lark báo lỗi, lưu tạm thành file JSON riêng tư trên Vercel Blob để không mất khách
+// (cần BLOB_READ_WRITE_TOKEN, Vercel tự thêm khi kết nối Blob store với project).
 const crypto = require('crypto');
 const { put } = require('@vercel/blob');
+const lark = require('./_lark');
 const { INTERESTS, PACKAGES, REQUESTS, ROLES, PREFIX, parseBody } = require('./_shared');
 
 const clean = (v, max) => String(v ?? '').trim().slice(0, max);
+
+// Tên cột phải trùng y hệt tên cột trong bảng Lark (xem LARK-BASE-SETUP.md)
+const toLarkFields = (l) => ({
+  'Họ và tên': l.name,
+  'Số điện thoại': l.phone,
+  'Tên công ty': l.company,
+  'Vai trò': l.role,
+  'Giải pháp quan tâm': l.interest,
+  'Gói quan tâm': l.package,
+  'Nhu cầu': l.request,
+  'Giải pháp đã xem': l.viewed.join(', '),
+  'Nguồn đăng ký': l.source,
+  'Ghi chú': l.note,
+  'Trạng thái': l.status,
+});
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -35,6 +52,15 @@ module.exports = async (req, res) => {
 
   if (lead.name.length < 2 || lead.company.length < 2 || !lead.role || !/^(\+84|0)\d{9,10}$/.test(lead.phone)) {
     return res.status(400).json({ ok: false, error: 'Thiếu hoặc sai thông tin bắt buộc' });
+  }
+
+  if (lark.isConfigured()) {
+    try {
+      const id = await lark.addRecord(toLarkFields(lead));
+      return res.status(200).json({ ok: true, id });
+    } catch (err) {
+      console.error('Lark write failed, saving to Blob', err.message);
+    }
   }
 
   const id = `${lead.createdAt.replace(/[:.]/g, '-')}-${crypto.randomBytes(3).toString('hex')}`;
