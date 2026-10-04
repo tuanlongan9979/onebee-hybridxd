@@ -1,23 +1,21 @@
 # Vận hành OneBee HybridXD
 
-## Hiện tại (từ 03/10/2026): lưu trên Vercel
+## Lưu đăng ký
 
 - Website: https://onebee-hybridxd.vercel.app
 - Danh sách đăng ký: https://onebee-hybridxd.vercel.app/admin, nhập mã quản trị trong file `.admin-key.txt` (chỉ nằm trên máy này, không upload).
-- Dữ liệu: Vercel Blob store `onebee-hybridxd-leads` (riêng tư, vùng Singapore). Mỗi đăng ký là 1 file `leads/<thời gian>-<mã>.json`.
+- Đăng ký từ website được ghi thẳng vào Lark Base (`api/lead.js` → `api/_lark.js`). Khi chưa đặt đủ 4 biến `LARK_*` hoặc Lark báo lỗi, đăng ký được lưu tạm vào Vercel Blob để không mất khách (xem tại /admin), rồi chuyển sang Lark sau.
+- Dữ liệu cũ (trước khi chuyển sang Lark) nằm trong Vercel Blob `onebee-hybridxd-leads`, mỗi đăng ký là 1 file `leads/<thời gian>-<mã>.json`. Xuất CSV ở /admin trước khi xoá hay đổi gì.
 - Trang /admin: đếm theo giải pháp, lọc theo nhu cầu / gói, nút **Xuất Excel (CSV)**.
 - Đổi mã quản trị: Vercel → Project onebee-hybridxd → Settings → Environment Variables → `ADMIN_KEY`, rồi redeploy.
 - Cập nhật website: sửa file trong thư mục này, chạy `npx vercel deploy --prod` tại thư mục `hybrid-construction-web`.
 
-Code ghi Lark Base trước đây đã được thay bằng Vercel Blob. Phần dưới giữ lại để chuyển sang Lark Base sau này (cần thêm lại hàm ghi Lark vào `api/lead.js`, có thể chạy song song với Blob).
-
 ---
 
-# (Sau này) Lưu đăng ký tư vấn vào Lark Base
+# Cấu hình Lark Base
 
 Website gửi đăng ký → hàm `api/lead.js` (chạy trên Vercel) → tạo 1 bản ghi trong Lark Base.
 Cột **Giải pháp quan tâm** được website tự điền theo nút "Demo giải pháp …" mà khách bấm.
-Bảng Lark nên có thêm 3 cột mới: **Gói quan tâm**, **Nhu cầu**, **Ghi chú** (thông số ROI khách đã nhập).
 
 ## 1. Tạo bảng trong Lark Base (5 phút)
 
@@ -31,7 +29,10 @@ Bảng Lark nên có thêm 3 cột mới: **Gói quan tâm**, **Nhu cầu**, **G
 | Tên công ty | Văn bản | |
 | Vai trò | Chọn một | Chủ đầu tư · Nhà thầu · Tư vấn |
 | **Giải pháp quan tâm** | **Chọn một** | Quản lý dự án · Dự toán & Dự thầu · Thẩm tra thiết kế · Thanh quyết toán · Kiểm thử & Nghiệm thu · Hồ sơ & Cấp phép · Chưa xác định |
+| Gói quan tâm | Văn bản | |
+| Nhu cầu | Văn bản | Tư vấn giải pháp · Dùng thử Demo 7 ngày · Nhận bảng tính ROI |
 | Giải pháp đã xem | Văn bản | |
+| Ghi chú | Văn bản | Thông số ROI khách đã nhập |
 | Nguồn đăng ký | Chọn một | Demo giải pháp · Thanh menu · Đầu trang · Đăng ký tư vấn |
 | Trạng thái | Chọn một | Mới · Đã liên hệ · Đã demo · Đã ký |
 | Ngày đăng ký | **Thời gian tạo** (thêm mới) | Lark tự điền |
@@ -39,7 +40,7 @@ Bảng Lark nên có thêm 3 cột mới: **Gói quan tâm**, **Nhu cầu**, **G
 3. Xóa dòng "Khách mẫu".
 4. Gợi ý view: **Kanban nhóm theo "Giải pháp quan tâm"** để mỗi chuyên gia nhận đúng nhóm khách; thêm Automation "Khi có bản ghi mới → gửi tin nhắn vào group Sales".
 
-> Tên cột phải viết đúng y hệt bảng trên (kể cả dấu và ký tự `&`), nếu không API sẽ báo lỗi `FieldNameNotFound`.
+> Cột kiểu **Chọn một** phải có sẵn đúng các tuỳ chọn ở bảng trên; nếu muốn chắc ăn, để kiểu Văn bản. Tên cột phải viết đúng y hệt bảng trên (kể cả dấu và ký tự `&`), nếu không API sẽ báo lỗi `FieldNameNotFound`.
 
 ## 2. Tạo Custom App để website ghi được vào Base
 
